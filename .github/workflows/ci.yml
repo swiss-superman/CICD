@@ -11,10 +11,8 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  scan:
+  gitleaks:
     runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep
     steps:
       - uses: actions/checkout@v6
         with:
@@ -25,11 +23,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_NOTIFY_USER_LIST: "@swiss-superman,@KaoKsn"
 
+  semgrep-scan:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: SAST using semgrep
         run: semgrep --config auto --severity critical --error
 
   build-publish:
-    needs: [scan]
+    needs: [gitleaks, semgrep-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
