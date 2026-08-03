@@ -33,13 +33,19 @@ jobs:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
           push: false
+          load: true
           tags: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
+
+      - name: Checking if the image is present locally.
+        run:
+          docker image inspect "${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}"
 
       - name: Trivy image scan for critical vulnerabilites in os, libarires.
         uses: aquasecurity/trivy-action@v0.36.0
         with: 
           image-ref: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
           format: "json"
+          vuln-type: "os,library"
           severity: "CRITICAL"
           exit-code: "1"
           scanners: "vuln"
