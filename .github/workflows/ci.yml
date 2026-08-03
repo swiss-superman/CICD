@@ -22,7 +22,7 @@ jobs:
       - uses: actions/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_NOTIFY_USER_LIST: ['swiss-superman', 'KaoKsn']
+          GITLEAKS_NOTIFY_USER_LIST: "@swiss-superman,@KaoKsn"
 
       - name: Setup docker buildx.
         uses: docker/setup-buildx-action@v3
