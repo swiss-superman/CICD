@@ -13,6 +13,8 @@ env:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
     steps:
       - uses: actions/checkout@v6
         with:
@@ -24,8 +26,6 @@ jobs:
           GITLEAKS_NOTIFY_USER_LIST: "@swiss-superman,@KaoKsn"
 
       - name: SAST using semgrep
-        container:
-          image: semgrep/semgrep
         run: semgrep --config auto --severity critical --error
 
   build-publish:
