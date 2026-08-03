@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/gitleaks-action@v3
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_NOTIFY_USER_LIST: "@swiss-superman,@KaoKsn"
@@ -36,7 +36,7 @@ jobs:
           tags: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
 
       - name: Trivy image scan for critical vulnerabilites in os, libarires.
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.36.0
         with: 
           image-ref: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
           format: "json"
