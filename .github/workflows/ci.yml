@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: SAST using semgrep
-        run: semgrep --config auto --severity critical --error
+        run: semgrep --config auto --severity WARNING --error
 
   build-publish:
     needs: [gitleaks, semgrep-scan]
