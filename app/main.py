@@ -27,7 +27,8 @@ async def health():
         "code": 200,
         "time": db.execute("SELECT datetime() AS now")[0]['now'],
         "version": os.getenv("API_VERSION"),
-        "project info": "/project/info"
+        "project info": "/project/info",
+        "something_random": "hello, all!"
     }
 
 @app.get("/info")
