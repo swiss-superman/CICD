@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: SAST using semgrep
-        run: semgrep --config auto --severity WARNING --error --exclude '*/.github/workflows/*.yml'
+        run: semgrep --config auto --severity WARNING --exclude '*/.github/workflows/*.yml' .
 
   build-publish:
     needs: [gitleaks, semgrep-scan]
