@@ -7,12 +7,11 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: dummyapi
-  IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
   DOCKERFILE_PATH: ./Dockerfile
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  build-scan-publish:
+  scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -24,11 +23,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_NOTIFY_USER_LIST: "@swiss-superman,@KaoKsn"
 
+      - name: SAST using semgrep
+        container:
+          image: semgrep/semgrep
+        run: semgrep --config auto --severity critical --error
+
+  build-publish:
+    needs: [scan]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Setup docker buildx.
         uses: docker/setup-buildx-action@v3
 
       - name: Build the container image locally
         uses: docker/build-push-action@v6
+        env:
+          IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
         with:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
@@ -44,6 +58,8 @@ jobs:
 
       - name: Trivy image scan for critical vulnerabilites in os, libarires.
         uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
         with: 
           image-ref: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
           format: "json"
@@ -60,6 +76,8 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: publish the image on docker.io
+        env:
+          IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
         run: |
           docker push "${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG}}"
           docker push "${{ env.IMAGE_REPO }}:latest"
