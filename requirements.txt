@@ -1,0 +1,5 @@
+fastapi
+cs50
+uvicorn
+dotenv
+starlette
