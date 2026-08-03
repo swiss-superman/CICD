@@ -2,9 +2,9 @@ name: Greet a first time contributor
 
 on:
   issues:
-    type: [openend]
-  pull-request:
-    type: [openend]
+    type: [opened]
+  pull_request:
+    type: [opened]
 
 jobs:
   welcome:
@@ -13,23 +13,23 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-    - name: greet the first time contributor.
-      uses: first-interactions@v1
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        issue-message: |
-          Welcome to the CICD project. This seems to be your first issue here.
-          Please read the CODE_OF_CONDUCT.md to understand our community interaction standards
-          Read CONTRIBUTING.md to learn the rules for contributing to this project.
-          We assume that you have already read these documents atleast once before creating this request.
+      - name: greet the first time contributor.
+        uses: first-interactions@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            Welcome to the CICD project. This seems to be your first issue here.
+            Please read the CODE_OF_CONDUCT.md to understand our community interaction standards
+            Read CONTRIBUTING.md to learn the rules for contributing to this project.
+            We assume that you have already read these documents atleast once before creating this request.
 
-          Thanks and Regards.
-          Project CICD team.
-        pr-message: |
-          Welcome to the CICD project. This looks like your first pull request here.
-          Please read the CODE_OF_CONDUCT.md to understand our community interaction standards
-          Read CONTRIBUTING.md to learn the rules for contributing to this project.
-          We assume that you have already read these documents atleast once before creating this request.
+            Thanks and Regards.
+            Project CICD team.
+          pr-message: |
+            Welcome to the CICD project. This looks like your first pull request here.
+            Please read the CODE_OF_CONDUCT.md to understand our community interaction standards
+            Read CONTRIBUTING.md to learn the rules for contributing to this project.
+            We assume that you have already read these documents atleast once before creating this request.
 
-          Thanks and Regards.
-          Project CICD team.
+            Thanks and Regards.
+            Project CICD team.
