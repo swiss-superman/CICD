@@ -50,6 +50,12 @@ async def search(guess: int):
             "message": "Invalid random number guessed, try something between (1, 10)"
         }
 
+@app.get("/contribute")
+async def contribute():
+    return {
+        "message": "Contribute to the project @ https://github.com/swiss-superman/CICD.git"
+    }
+
 """ Error Handlers """
 @app.exception_handler(404)
 async def not_found_handler(request: Response, exc):
