@@ -56,6 +56,15 @@ async def contribute():
         "message": "Contribute to the project @ https://github.com/swiss-superman/CICD.git"
     }
 
+@app.get("/project/info")
+async def projectinfo():
+    return {
+        "github": "https://github.com/swiss-superman/CICD.git",
+        "dockerhub": "https://hub.docker.io/kaoksn/dummyapi",
+        "pull": "docker pull docker.io/kaoksn/dummyapi:latest",
+        "version": os.getenv("API_VERSION")
+    }
+
 """ Error Handlers """
 @app.exception_handler(404)
 async def not_found_handler(request: Response, exc):
