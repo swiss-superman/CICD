@@ -1,0 +1,205 @@
+name: Security Scanner that creates and normalizes the outputs as github actions artifacts.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, release]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: dummyapi
+  DOCKERFILE_PATH: ./Dockerfile
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets with Gitleaks
+        run: |
+          mkdir -p /tmp/scan-reports
+          docker run --rm \
+            -v ${{ github.workspace }}:/repo \
+            -v /tmp/scan-reports:/output \
+            zricethezav/gitleaks:latest detect \
+            --source /repo \
+            --report-format json \
+            --report-path /output/gitleaks-report.json \
+            --exit-code 0
+        continue-on-error: true
+      - name: Normalize gitleaks output
+        run: |
+          if [ -f /tmp/scan-reports/gitleaks-report.json ]; then
+            jq '[
+              .[] |
+              {
+                File: .File,
+                StartLine: .StartLine,
+                EndLine: .EndLine,
+                Commit: .Commit
+              }
+            ]' \
+            /tmp/scan-reports/gitleaks-report.json \
+            > /tmp/gitleaks-report-norm.json
+          else
+            echo '[]' > /tmp/gitleaks-report-norm.json
+          fi
+      - name: Upload Gitleaks report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-report
+          path: /tmp/gitleaks-report-norm.json
+          retention-days: 30
+
+  semgrep-scan:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: SAST using semgrep
+        run: semgrep --config auto --json --severity WARNING --exclude '*/.github/workflows/*.yml' . > /tmp/semgrep-report.json
+      - name: Normalize semgrep output
+        run: |
+          cat /tmp/semgrep-report.json | jq '
+              .results[] |
+              {
+                  path: .path,
+                  start: .start,
+                  end: .end,
+                  message: (.extra.message // null),
+                  severity: (.extra.severity // null),
+                  validation_state: (.extra.validation_state // null),
+
+                  cwe: (.extra.metadata.cwe // null),
+                  likelihood: (.extra.metadata.likelihood // null),
+                  impact: (.extra.metadata.impact // null),
+                  references: (.extra.metadata.references // null),
+                  shortlink: (.extra.metadata.shortlink // null)
+              }
+              ' > /tmp/semgrep-report-norm.json
+      - name: Upload Semgrep report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-report
+          path: /tmp/semgrep-report-norm.json
+          retention-days: 30
+
+  checkov-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Scan the repo for infrastructure files
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: all
+          output_format: json
+          output_file_path: /tmp/checkov-report.json
+          continue-on-error: true
+      - name: Normalize checkov output.
+        run: |
+          cat /tmp/checkov-report.json |  jq '[
+          .results.failed_checks[] |
+          {
+            check_id: .check_id,
+            check_name: .check_name,
+            severity: .severity // null,
+            short_description: .short_description // null,
+            resource_address: .resource_address,
+            file_abs_path: .file_abs_path,
+            file_line_range: .file_line_range,
+            code_block: ([.code_block[]? | .[1]] | join ("\n")),
+            guideline: .guideline // null,
+            fixed_definition: .fixed_definition // null
+          }]
+          ' > /tmp/checkov-report-norm.json
+      - name: Upload checkov report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-report
+          path: /tmp/checkov-report-norm.json
+          retention-days: 30
+
+  trivy-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup docker buildx.
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the container image locally
+        uses: docker/build-push-action@v6
+        env:
+          IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: false
+          load: true
+          tags: |
+            ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_REPO }}:latest
+
+      - name: Trivy image scan for critical and high vulnerabilites in os, libarires.
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
+        with: 
+          image-ref: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
+          format: "json"
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          output: /tmp/trivy-report.json
+          exit-code: "1"
+          scanners: "vuln"
+      - name: Normalize the json output from trivy.
+        run: |
+          cat /tmp/trivy-report.json | jq '[.Results[] |
+            {
+                Target: .Target,
+                Vulnerabilities: .Vulnerabilities // [] |
+                    map({
+                        VulnerabilityID: .VulnerabilityID,
+                        Title: .Title,
+                        Severity: .Severity,
+                        CVSS: .CVSS,
+                        Status: .Status,
+                        InstalledVersion: .InstalledVersion,
+                        FixedVersion: .FixedVersion,
+                        PkgName: .PkgName,
+                        PkgIdentifier: .PkgIdentifier,
+                        DataSource: .DataSource,
+                        References: .References
+                    })
+            }
+          ]' > /tmp/trivy-report-norm.json
+      - name: Upload trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: /tmp/trivy-report-norm.json
+          retention-days: 30
+
+  consolidate-reports:
+    name: Output a final JSON will all the reports.
+    runs-on: ubuntu-latest
+    needs: [checkov-scan, gitleaks, semgrep-scan, trivy-scan]
+    steps:
+      - uses: actions/download-artifacts@v4

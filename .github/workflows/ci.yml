@@ -1,6 +1,7 @@
 name: Scan for leaks, build and scan image, and push.
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, release]
 
