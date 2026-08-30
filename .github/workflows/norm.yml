@@ -105,7 +105,7 @@ jobs:
         with:
           directory: .
           framework: all
-          output_format: json, xml
+          output_format: json, junitxml
           output_file_path: /tmp/checkov-report.json,/tmp/checkov-report-junitxml.xml
         continue-on-error: true
       - name: Normalize checkov output.
@@ -210,10 +210,3 @@ jobs:
           name: trivy-report
           path: /tmp/trivy-report-norm.json
           retention-days: 30
-
-  consolidate-reports:
-    name: Consolidated normalized json report.
-    runs-on: ubuntu-latest
-    needs: [checkov-scan, gitleaks, semgrep-scan, trivy-scan]
-    steps:
-      - uses: actions/download-artifact@v4
