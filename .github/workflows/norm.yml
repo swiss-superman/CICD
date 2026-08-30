@@ -103,7 +103,7 @@ jobs:
       - name: Scan the repo for infrastructure files
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: .
+          file: target.tf
           framework: all
           output_format: json, junitxml
           output_file_path: /tmp/checkov-report.json,/tmp/checkov-report-junitxml.xml
