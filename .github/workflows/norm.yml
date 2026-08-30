@@ -131,6 +131,7 @@ jobs:
             ]' /tmp/checkov-report.json > /tmp/checkov-report-norm.json
           else
             echo '[]' > /tmp/checkov-report-norm.json
+            echo "Report was not found"
           fi
       - name: Upload checkov report
         if: always()
