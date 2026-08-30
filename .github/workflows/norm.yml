@@ -128,10 +128,9 @@ jobs:
                 guideline: (.guideline // null),
                 fixed_definition: (.fixed_definition // null)
               }
-            ]' /tmp/checkov-report.json > /tmp/checkov-report-norm.json
+            ]' /tmp/checkov-report.json/results_json.json > /tmp/checkov-report-norm.json
           else
             echo '[]' > /tmp/checkov-report-norm.json
-            echo "Report was not found"
           fi
       - name: Upload checkov report
         if: always()
