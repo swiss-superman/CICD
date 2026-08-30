@@ -105,12 +105,12 @@ jobs:
         with:
           file: target.tf
           framework: all
-          output_format: json, junitxml
-          output_file_path: /tmp/checkov-report.json,/tmp/checkov-report-junitxml.xml
+          output_format: json
+          output_file_path: /tmp/checkov-report.json
         continue-on-error: true
       - name: Normalize checkov output.
         run: |
-          if [ -f /tmp/checkov-report.json ]; then
+          if [ -f /tmp/checkov-report.json ] || [ -f /tmp/checkov-report.json/results_json.json ]; then
             jq '[
               .results.failed_checks[]? |
               {
