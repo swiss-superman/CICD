@@ -69,7 +69,7 @@ jobs:
         run: semgrep --config auto --json --severity WARNING --exclude '*/.github/workflows/*.yml' . > /tmp/semgrep-report.json
       - name: Normalize semgrep output
         run: |
-          cat /tmp/semgrep-report.json | jq '
+          cat /tmp/semgrep-report.json | jq '[
               .results[] |
               {
                   path: .path,
@@ -84,7 +84,7 @@ jobs:
                   impact: (.extra.metadata.impact // null),
                   references: (.extra.metadata.references // null),
                   shortlink: (.extra.metadata.shortlink // null)
-              }
+              }]
               ' > /tmp/semgrep-report-norm.json
       - name: Upload Semgrep report
         uses: actions/upload-artifact@v4
@@ -216,4 +216,4 @@ jobs:
     runs-on: ubuntu-latest
     needs: [checkov-scan, gitleaks, semgrep-scan, trivy-scan]
     steps:
-      - uses: actions/download-artifacts@v4
+      - uses: actions/download-artifact@v4
