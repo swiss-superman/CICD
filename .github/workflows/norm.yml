@@ -106,11 +106,12 @@ jobs:
           file: target.tf
           framework: all
           output_format: json
-          output_file_path: /tmp/checkov-report.json
+          output_file_path: /tmp/checkov-report
         continue-on-error: true
-      - name: Normalize checkov output.
+      - name: Normalize checkov output
+        if: always()
         run: |
-          if [ -f /tmp/checkov-report.json ] || [ -f /tmp/checkov-report.json/results_json.json ]; then
+          if [ -f /tmp/checkov-report/results_json.json ]; then
             jq '[
               .results.failed_checks[]? |
               {
@@ -128,10 +129,12 @@ jobs:
                 guideline: (.guideline // null),
                 fixed_definition: (.fixed_definition // null)
               }
-            ]' /tmp/checkov-report.json/results_json.json > /tmp/checkov-report-norm.json
+            ]' \
+            /tmp/checkov-report/results_json.json \
+            > /tmp/checkov-report-norm.json
           else
             echo '[]' > /tmp/checkov-report-norm.json
-            echo "Failed"
+            echo "Checkov JSON report was not generated"
           fi
       - name: Upload checkov report
         if: always()
