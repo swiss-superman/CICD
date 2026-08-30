@@ -106,7 +106,7 @@ jobs:
           directory: .
           framework: all
           output_format: json, xml
-          output_file_path: [/tmp/checkov-report.json,/tmp/checkov-report-junitxml.xml]
+          output_file_path: /tmp/checkov-report.json,/tmp/checkov-report-junitxml.xml
         continue-on-error: true
       - name: Normalize checkov output.
         run: |
