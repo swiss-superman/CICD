@@ -105,26 +105,33 @@ jobs:
         with:
           directory: .
           framework: all
-          output_format: json
-          output_file_path: /tmp/checkov-report.json
+          output_format: json, xml
+          output_file_path: [/tmp/checkov-report.json,/tmp/checkov-report-junitxml.xml]
         continue-on-error: true
       - name: Normalize checkov output.
         run: |
-          cat /tmp/checkov-report.json |  jq '[
-          .results.failed_checks[] |
-          {
-            check_id: .check_id,
-            check_name: .check_name,
-            severity: .severity // null,
-            short_description: .short_description // null,
-            resource_address: .resource_address,
-            file_abs_path: .file_abs_path,
-            file_line_range: .file_line_range,
-            code_block: ([.code_block[]? | .[1]] | join ("\n")),
-            guideline: .guideline // null,
-            fixed_definition: .fixed_definition // null
-          }]
-          ' > /tmp/checkov-report-norm.json
+          if [ -f /tmp/checkov-report.json ]; then
+            jq '[
+              .results.failed_checks[]? |
+              {
+                check_id: .check_id,
+                check_name: .check_name,
+                severity: (.severity // null),
+                short_description: (.short_description // null),
+                resource_address: (.resource_address // null),
+                file_abs_path: (.file_abs_path // null),
+                file_line_range: (.file_line_range // null),
+                code_block: (
+                  [.code_block[]? | .[1]]
+                  | join("\n")
+                ),
+                guideline: (.guideline // null),
+                fixed_definition: (.fixed_definition // null)
+              }
+            ]' /tmp/checkov-report.json > /tmp/checkov-report-norm.json
+          else
+            echo '[]' > /tmp/checkov-report-norm.json
+          fi
       - name: Upload checkov report
         if: always()
         uses: actions/upload-artifact@v4
@@ -171,25 +178,31 @@ jobs:
         continue-on-error: true
       - name: Normalize the json output from trivy.
         run: |
-          cat /tmp/trivy-report.json | jq '[.Results[] |
+      - name: Normalize the json output from trivy
+        if: always()
+        run: |
+          jq '[
+            .Results[]? |
             {
-                Target: .Target,
-                Vulnerabilities: .Vulnerabilities // [] |
-                    map({
-                        VulnerabilityID: .VulnerabilityID,
-                        Title: .Title,
-                        Severity: .Severity,
-                        CVSS: .CVSS,
-                        Status: .Status,
-                        InstalledVersion: .InstalledVersion,
-                        FixedVersion: .FixedVersion,
-                        PkgName: .PkgName,
-                        PkgIdentifier: .PkgIdentifier,
-                        DataSource: .DataSource,
-                        References: .References
-                    })
+              Target: .Target,
+              Vulnerabilities: [
+                .Vulnerabilities[]? |
+                {
+                  VulnerabilityID: .VulnerabilityID,
+                  Title: .Title,
+                  Severity: .Severity,
+                  CVSS: .CVSS,
+                  Status: .Status,
+                  InstalledVersion: .InstalledVersion,
+                  FixedVersion: .FixedVersion,
+                  PkgName: .PkgName,
+                  PkgIdentifier: .PkgIdentifier,
+                  DataSource: .DataSource,
+                  References: .References
+                }
+              ]
             }
-          ]' > /tmp/trivy-report-norm.json
+          ]' /tmp/trivy-report.json > /tmp/trivy-report-norm.json
       - name: Upload trivy report
         if: always()
         uses: actions/upload-artifact@v4
