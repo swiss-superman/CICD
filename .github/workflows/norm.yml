@@ -100,14 +100,19 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Scan the repo for infrastructure files
-        uses: bridgecrewio/checkov-action@master
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          file: target.tf
-          framework: all
-          output_format: json
-          output_file_path: /tmp/checkov-report.json, # Bug in checkov
-          quiet: true # Write just failed checks.
+          python-version: "3.11"
+      - name: Install Checkov
+        run: pip install checkov
+      - name: Scan the repo for infrastructure files
+        run: |
+          checkov -f target.tf \
+                  --framework all \
+                  --output json \
+                  --output-file-path /tmp/checkov-report.json, \
+                  --quiet
         continue-on-error: true
       - name: Normalize checkov output
         if: always()
