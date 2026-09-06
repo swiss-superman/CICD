@@ -106,7 +106,7 @@ jobs:
           file: target.tf
           framework: all
           output_format: json
-          output_file_path: /tmp/checkov-report
+          output_file_path: /tmp/checkov-report, # Bug in checkov
           quiet: true # Write just failed checks.
         continue-on-error: true
       - name: Normalize checkov output
