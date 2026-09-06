@@ -106,13 +106,13 @@ jobs:
           file: target.tf
           framework: all
           output_format: json
-          output_file_path: /tmp/checkov-report, # Bug in checkov
+          output_file_path: /tmp/checkov-report.json, # Bug in checkov
           quiet: true # Write just failed checks.
         continue-on-error: true
       - name: Normalize checkov output
         if: always()
         run: |
-          if [ -f /tmp/checkov-report/results_json.json ]; then
+          if [ -f /tmp/checkov-report.json ]; then
             jq '[
               .results.failed_checks[]? |
               {
@@ -131,7 +131,7 @@ jobs:
                 fixed_definition: (.fixed_definition // null)
               }
             ]' \
-            /tmp/checkov-report/results_json.json \
+            /tmp/checkov-report.json \
             > /tmp/checkov-report-norm.json
             echo "Report was normalized"
           else
@@ -141,6 +141,9 @@ jobs:
           shopt -s nullglob
           for file in /tmp/*/*.json; do
             echo "$file"
+          done
+          for file in /tmp/*.json; do
+            ls -l "$file"
           done
           shopt -u nullglob
       - name: Upload checkov report
