@@ -12,10 +12,10 @@ env:
   IMAGE_NAME: dummyapi
 
 jobs:
-  gitleaks:
-    runs-on: ubuntu-latest
+  gitleaks-scan:
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           fetch-depth: 0
 
@@ -49,7 +49,7 @@ jobs:
             echo '[]' > /tmp/gitleaks-report-norm.json
           fi
       - name: Upload Gitleaks report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         if: always()
         with:
           name: gitleaks-report
@@ -57,11 +57,11 @@ jobs:
           retention-days: 30
 
   semgrep-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           fetch-depth: 0
 
@@ -87,7 +87,7 @@ jobs:
               }]
               ' > /tmp/semgrep-report-norm.json
       - name: Upload Semgrep report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         if: always()
         with:
           name: semgrep-report
@@ -95,13 +95,13 @@ jobs:
           retention-days: 30
 
   checkov-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 #v7.0.0
         with:
           python-version: "3.11"
       - name: Install Checkov
@@ -112,7 +112,8 @@ jobs:
                   --framework all \
                   --output json \
                   --output-file-path /tmp/checkov-report.json, \
-                  --quiet
+                  --quiet \
+                  --soft-fail
         continue-on-error: true
       - name: Normalize checkov output
         if: always()
@@ -141,36 +142,27 @@ jobs:
             echo "Report was normalized"
           else
             echo '[]' > /tmp/checkov-report-norm.json
-            echo "Checkov JSON report was not generated"
           fi
-          shopt -s nullglob
-          for file in /tmp/*/*.json; do
-            echo "$file"
-          done
-          for file in /tmp/*.json; do
-            ls -l "$file"
-          done
-          shopt -u nullglob
       - name: Upload checkov report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: checkov-report
           path: /tmp/checkov-report-norm.json
           retention-days: 30
 
   trivy-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup docker buildx.
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e #v4.3.0
 
       - name: Build the container image locally
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a #v7.3.0
         env:
           IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
         with:
@@ -183,7 +175,7 @@ jobs:
             ${{ env.IMAGE_REPO }}:latest
 
       - name: Trivy image scan for critical and high vulnerabilites in os, libarires.
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
         env:
           IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
         with:
@@ -222,8 +214,49 @@ jobs:
           ]' /tmp/trivy-report.json > /tmp/trivy-report-norm.json
       - name: Upload trivy report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: trivy-report
           path: /tmp/trivy-report-norm.json
           retention-days: 30
+
+  consolidate-reports:
+    needs: [gitleaks-scan, trivy-scan, semgrep-scan, checkov-scan]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download normalized reports from all the tools
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c #v8.0.1
+        with:
+          path: /tmp/results
+      - name: Consolidate the report outputs
+        shell: bash
+        # actions/download-artifact downloads each under its name i.e
+        # gitleaks-report/gitleaks-report-norm.json
+        run: |
+          report_path="/tmp/results"
+          consolidated_report="/tmp/consolidated-report.json"
+
+          find "$report_path" -name "*-report-norm.json" | while read -r f; do
+              jq -n \
+                --arg toolname "$(basename "$f" -norm.json)" \
+                --arg file "$f" \
+                --slurpfile content "$f" '
+                    ($toolname | if contains("checkov") then  {tool: "checkov", categories: ["misconfiguration"]}
+                    elif contains("gitleaks") then {tool: "gitleaks", categories: ["secrets"]}
+                    elif contains("semgrep") then {tool: "semgrep", categories: ["sast"]}
+                    elif contains("trivy") then {tool: "trivy", categories: ["vulnerabilities", "containers"]}
+                    else {tool: $toolname, categories: ["general"]} end) as $meta |
+                {
+                    categories: $meta.categories,
+                    tool: $meta.tool,
+                    resultsource: $file,
+                    results: $content[0]
+                }
+                '
+          done | jq -s '.' >| "$consolidated_report"
+      - name: Upload the consolidated report.
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
+        with:
+          name: consolidated-report.json
+          path: /tmp/consolidated-report.json
+          retention-days: 45
