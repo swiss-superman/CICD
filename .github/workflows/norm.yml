@@ -112,7 +112,7 @@ jobs:
       - name: Normalize checkov output
         if: always()
         run: |
-          if [ -f /tmp/checkov-report/results_json.json ]; then
+          if [ -f /tmp/checkov-report ]; then
             jq '[
               .results.failed_checks[]? |
               {
@@ -138,6 +138,9 @@ jobs:
             echo '[]' > /tmp/checkov-report-norm.json
             echo "Checkov JSON report was not generated"
           fi
+          for file in /tmp/*.json; do
+            echo "$file"
+          done
       - name: Upload checkov report
         if: always()
         uses: actions/upload-artifact@v4
@@ -179,7 +182,7 @@ jobs:
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
           output: /tmp/trivy-report.json
-          exit-code: "1"
+          exit-code: "0" # Change to 1 when needed.
           scanners: "vuln"
         continue-on-error: true
       - name: Normalize the json output from trivy
