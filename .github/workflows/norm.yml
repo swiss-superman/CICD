@@ -133,6 +133,7 @@ jobs:
             ]' \
             /tmp/checkov-report/results_json.json \
             > /tmp/checkov-report-norm.json
+            echo "Report was normalized"
           else
             echo '[]' > /tmp/checkov-report-norm.json
             echo "Checkov JSON report was not generated"
