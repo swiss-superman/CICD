@@ -112,7 +112,7 @@ jobs:
       - name: Normalize checkov output
         if: always()
         run: |
-          if [ -f /tmp/checkov-report ]; then
+          if [ -f /tmp/checkov-report/results_json.json ]; then
             jq '[
               .results.failed_checks[]? |
               {
@@ -138,9 +138,11 @@ jobs:
             echo '[]' > /tmp/checkov-report-norm.json
             echo "Checkov JSON report was not generated"
           fi
-          for file in /tmp/*.json; do
+          shopt -s nullglob
+          for file in /tmp/*/*.json; do
             echo "$file"
           done
+          shopt -u nullglob
       - name: Upload checkov report
         if: always()
         uses: actions/upload-artifact@v4
