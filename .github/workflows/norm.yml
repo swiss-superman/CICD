@@ -1,4 +1,4 @@
-name: Security Scanner that creates and normalizes the outputs as github actions artifacts.
+name: Scanner and Normalization.
 
 on:
   workflow_dispatch:
@@ -7,9 +7,9 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: dummyapi
-  DOCKERFILE_PATH: ./Dockerfile
   IMAGE_TAG: ${{ github.sha }}
+  DOCKERFILE_PATH: ./Dockerfile
+  IMAGE_NAME: dummyapi
 
 jobs:
   gitleaks:
@@ -107,6 +107,7 @@ jobs:
           framework: all
           output_format: json
           output_file_path: /tmp/checkov-report
+          quiet: true # Write just failed checks.
         continue-on-error: true
       - name: Normalize checkov output
         if: always()
@@ -171,7 +172,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         env:
           IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
-        with: 
+        with:
           image-ref: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
           format: "json"
           vuln-type: "os,library"
@@ -180,8 +181,6 @@ jobs:
           exit-code: "1"
           scanners: "vuln"
         continue-on-error: true
-      - name: Normalize the json output from trivy.
-        run: |
       - name: Normalize the json output from trivy
         if: always()
         run: |
