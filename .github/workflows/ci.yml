@@ -13,23 +13,23 @@ env:
 
 jobs:
   gitleaks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@v3
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e #v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_NOTIFY_USER_LIST: "@swiss-superman,@KaoKsn"
 
   semgrep-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           fetch-depth: 0
 
@@ -38,17 +38,17 @@ jobs:
 
   build-publish:
     needs: [gitleaks, semgrep-scan]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup docker buildx.
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e #v4.3.0
 
       - name: Build the container image locally
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a #v7.3.0
         env:
           IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
         with:
@@ -63,14 +63,13 @@ jobs:
       - name: Checking if the image is present locally.
         env:
           IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
-        run:
-          docker image inspect "${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}"
+        run: docker image inspect "${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}"
 
       - name: Trivy image scan for critical vulnerabilites in os, libarires.
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
         env:
           IMAGE_REPO: docker.io/${{ secrets.DOCKER_USERNAME }}/dummyapi
-        with: 
+        with:
           image-ref: ${{ env.IMAGE_REPO }}:${{ env.IMAGE_TAG }}
           format: "json"
           vuln-type: "os,library"
@@ -79,7 +78,7 @@ jobs:
           scanners: "vuln"
 
       - name: container registry login and auth
-        uses: docker/login-action@v3
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKER_USERNAME }}
