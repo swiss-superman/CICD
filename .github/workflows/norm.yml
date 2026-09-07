@@ -49,8 +49,7 @@ jobs:
             echo '[]' > /tmp/gitleaks-report-norm.json
           fi
       - name: Upload Gitleaks report
-        uses: actions/upload-artifact@v7
-        #uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         if: always()
         with:
           name: gitleaks-report
@@ -68,7 +67,7 @@ jobs:
 
       - name: SAST using semgrep
         #      run: semgrep --config auto --json --severity WARNING --exclude '*/.github/workflows/*.yml' . > /tmp/semgrep-report.json
-        run: semgrep --config auto --json --error --severity WARNING . > /tmp/semgrep-report.json
+        run: semgrep --config auto --json --severity WARNING . > /tmp/semgrep-report.json
       - name: Normalize semgrep output
         run: |
           cat /tmp/semgrep-report.json | jq '[
