@@ -66,7 +66,7 @@ jobs:
           fetch-depth: 0
 
       - name: SAST using semgrep
-        run: semgrep --config auto --json --severity WARNING . > /tmp/semgrep-report.json # avoid non-zero exit
+        run: semgrep --config auto --json . > /tmp/semgrep-report.json # avoid non-zero exit
       - name: Normalize semgrep output
         run: |
           cat /tmp/semgrep-report.json | jq '[
